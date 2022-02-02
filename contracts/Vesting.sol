@@ -103,6 +103,7 @@ contract Vesting is Ownable {
 
   function claim() external inVestingPeriod {
     UserData memory userData = userConfig[msg.sender];
+    require(userData.vestedNFTs.length > 0, "No NFTs to claim!");
     require(
       userData.withdrawnCount != userData.vestedNFTs.length,
       "No NFTs left to claim!"
@@ -177,5 +178,9 @@ contract Vesting is Ownable {
       "Not after cliff period!"
     );
     return (block.timestamp - vestingStart) / releasePeriod;
+  }
+
+  function getUserData(address user) public view returns (UserData memory) {
+    return userConfig[user];
   }
 }

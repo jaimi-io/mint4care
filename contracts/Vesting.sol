@@ -12,6 +12,8 @@ contract Vesting is Ownable {
   uint256 public vestingEndTime; // timestamp when the vesting procedure ends
   IERC721 public vestingNFT; // the address of an ERC721 token used for vesting
 
+  uint256 private maxOwned; // maximum number of NFTs that is owned by a single address
+
   // holds user vesting data
   mapping(address => UserData) private userConfig;
   // holds user vesting paused data
@@ -43,6 +45,10 @@ contract Vesting is Ownable {
     beforeVestingStarted
   {
     userConfig[account] = UserData(tokenIds, 0);
+    uint256 maxTokens = tokenIds.length;
+    if (maxTokens > maxOwned) {
+      maxOwned = maxTokens;
+    }
   }
 
   function setUsers(address[] memory account, uint8[][] memory tokenIds)
@@ -51,8 +57,15 @@ contract Vesting is Ownable {
     beforeVestingStarted
   {
     require(account.length == tokenIds.length, "Invalid array lengths!");
+    uint256 maxTokens = 0;
     for (uint256 i = 0; i < account.length; i++) {
       userConfig[account[i]] = UserData(tokenIds[i], 0);
+      if (tokenIds[i].length > maxTokens) {
+        maxTokens = tokenIds[i].length;
+      }
+    }
+    if (maxTokens > maxOwned) {
+      maxOwned = maxTokens;
     }
   }
 
@@ -75,8 +88,8 @@ contract Vesting is Ownable {
     releasePeriod = releasePeriod_;
     vestingStartTime = timestamp == 0 ? block.timestamp : timestamp;
 
-    // TODO: add releasePeriod * maxOwned to vestingEndTime
-    vestingEndTime = vestingStartTime + securityPeriod;
+    uint256 minVestingTime = releasePeriod * maxOwned;
+    vestingEndTime = vestingStartTime + minVestingTime + securityPeriod;
     vestingStarted = true;
   }
 

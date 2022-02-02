@@ -14,10 +14,17 @@ contract Vesting is Ownable {
 
   // holds user vesting data
   mapping(address => UserData) private userConfig;
+  // holds user vesting paused data
+  mapping(address => PausedData) private pausedConfig;
 
   struct UserData {
     uint8[] vestedNFTs; // token IDs assigned to user
     uint256 withdrawnCount; // number of tokens withdrawn from vesting
+  }
+
+  struct PausedData {
+    uint256 pausedTime; // timestamp when the user paused the vesting procedure (0 if not paused)
+    uint256 timeOffset; // time offset in seconds due to pausings
   }
 
   constructor(address nftAddress) {
@@ -90,12 +97,42 @@ contract Vesting is Ownable {
     // TO IMPLEMENT
   }
 
-  function pauseVesting() external afterVestingStarted inVestingPeriod {
-    // TO IMPLEMENT
+  modifier whenNotPaused() {
+    require(
+      pausedConfig[msg.sender].pausedTime == 0,
+      "Vesting is paused for user!"
+    );
+    _;
   }
 
-  function unpauseVesting() external afterVestingStarted inVestingPeriod {
-    // TO IMPLEMENT
+  function pauseVesting()
+    external
+    afterVestingStarted
+    inVestingPeriod
+    whenNotPaused
+  {
+    pausedConfig[msg.sender].pausedTime = block.timestamp;
+  }
+
+  modifier whenPaused() {
+    require(
+      pausedConfig[msg.sender].pausedTime != 0,
+      "Vesting is not paused for user!"
+    );
+    _;
+  }
+
+  function unpauseVesting()
+    external
+    afterVestingStarted
+    inVestingPeriod
+    whenPaused
+  {
+    PausedData storage pausedData = pausedConfig[msg.sender];
+    if (block.timestamp > pausedData.pausedTime) {
+      pausedData.timeOffset += block.timestamp - pausedData.pausedTime;
+    }
+    pausedData.pausedTime = 0;
   }
 
   modifier afterVestingEnded() {

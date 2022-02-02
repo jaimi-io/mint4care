@@ -6,7 +6,10 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 contract Vesting is Ownable {
   bool public vestingStarted; // true when the vesting procedure has started
-  uint256 public vestingEndTime; // time when the vesting procedure ends
+  uint256 public vestingStartTime; // timestamp when the vesting procedure started
+  uint256 public cliffPeriod; // cliff period in seconds
+  uint256 public releasePeriod; // time in seconds for one NFT to be released
+  uint256 public vestingEndTime; // timestamp when the vesting procedure ends
   IERC721 public vestingNFT; // the address of an ERC721 token used for vesting
 
   // holds user vesting data
@@ -48,15 +51,26 @@ contract Vesting is Ownable {
 
   function startVesting(
     uint256 timestamp,
-    uint256 cliffPeriod,
-    uint256 releasePeriod,
+    uint256 cliffPeriod_,
+    uint256 releasePeriod_,
     uint256 securityPeriod
   ) external onlyOwner beforeVestingStarted {
     require(
       vestingNFT.balanceOf(address(this)) == 100,
       "NFT collection must be minted to vesting contract!"
     );
-    // TO IMPLEMENT
+    require(
+      timestamp == 0 || timestamp > block.timestamp,
+      "Invalid timestamp!"
+    );
+
+    cliffPeriod = cliffPeriod_;
+    releasePeriod = releasePeriod_;
+    vestingStartTime = timestamp == 0 ? block.timestamp : timestamp;
+
+    // TODO: add releasePeriod * maxOwned to vestingEndTime
+    vestingEndTime = vestingStartTime + securityPeriod;
+    vestingStarted = true;
   }
 
   modifier afterVestingStarted() {

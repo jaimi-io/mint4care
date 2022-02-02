@@ -78,20 +78,23 @@ contract Vesting is Ownable {
     _;
   }
 
-  modifier beforeVestingEnded() {
-    require(block.timestamp < vestingEndTime, "Vesting has ended!");
+  modifier inVestingPeriod() {
+    require(
+      block.timestamp >= vestingStartTime && block.timestamp < vestingEndTime,
+      "Vesting has ended!"
+    );
     _;
   }
 
-  function claim() external afterVestingStarted beforeVestingEnded {
+  function claim() external afterVestingStarted inVestingPeriod {
     // TO IMPLEMENT
   }
 
-  function pauseVesting() external afterVestingStarted beforeVestingEnded {
+  function pauseVesting() external afterVestingStarted inVestingPeriod {
     // TO IMPLEMENT
   }
 
-  function unpauseVesting() external afterVestingStarted beforeVestingEnded {
+  function unpauseVesting() external afterVestingStarted inVestingPeriod {
     // TO IMPLEMENT
   }
 

@@ -5,9 +5,17 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 contract Vesting is Ownable {
-  IERC721 public vestingNFT;
-  bool public vestingStarted;
-  uint256 public vestingEndTime;
+  bool public vestingStarted; // true when the vesting procedure has started
+  uint256 public vestingEndTime; // time when the vesting procedure ends
+  IERC721 public vestingNFT; // the address of an ERC721 token used for vesting
+
+  // holds user vesting data
+  mapping(address => UserData) private userConfig;
+
+  struct UserData {
+    uint8[] vestedNFTs; // token IDs assigned to user
+    uint256 withdrawnCount; // number of tokens withdrawn from vesting
+  }
 
   constructor(address nftAddress) {
     vestingNFT = IERC721(nftAddress);
@@ -19,20 +27,23 @@ contract Vesting is Ownable {
     _;
   }
 
-  function setUsers(address[] memory account, uint8[][] memory tokenIds)
-    external
-    onlyOwner
-    beforeVestingStarted
-  {
-    // TO IMPLEMENT
-  }
-
   function setUser(address account, uint8[] memory tokenIds)
     external
     onlyOwner
     beforeVestingStarted
   {
-    // TO IMPLEMENT
+    userConfig[account] = UserData(tokenIds, 0);
+  }
+
+  function setUsers(address[] memory account, uint8[][] memory tokenIds)
+    external
+    onlyOwner
+    beforeVestingStarted
+  {
+    require(account.length == tokenIds.length, "Invalid array lengths!");
+    for (uint256 i = 0; i < account.length; i++) {
+      userConfig[account[i]] = UserData(tokenIds[i], 0);
+    }
   }
 
   function startVesting(
@@ -41,6 +52,10 @@ contract Vesting is Ownable {
     uint256 releasePeriod,
     uint256 securityPeriod
   ) external onlyOwner beforeVestingStarted {
+    require(
+      vestingNFT.balanceOf(address(this)) == 100,
+      "NFT collection must be minted to vesting contract!"
+    );
     // TO IMPLEMENT
   }
 

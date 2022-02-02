@@ -141,6 +141,11 @@ contract Vesting is Ownable {
   }
 
   function endVesting(address reciever) external onlyOwner afterVestingEnded {
-    // TO IMPLEMENT
+    address vestingContract = address(this);
+    for (uint256 i = 1; i <= 100; i++) {
+      if (vestingNFT.ownerOf(i) == vestingContract) {
+        vestingNFT.transferFrom(vestingContract, reciever, i);
+      }
+    }
   }
 }

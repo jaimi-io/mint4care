@@ -80,21 +80,34 @@ contract Vesting is Ownable {
     vestingStarted = true;
   }
 
-  modifier afterVestingStarted() {
-    require(vestingStarted, "Vesting has not started!");
-    _;
-  }
-
   modifier inVestingPeriod() {
     require(
       block.timestamp >= vestingStartTime && block.timestamp < vestingEndTime,
-      "Vesting has ended!"
+      "Not in vesting period!"
     );
     _;
   }
 
-  function claim() external afterVestingStarted inVestingPeriod {
-    // TO IMPLEMENT
+  function claim() external inVestingPeriod {
+    UserData memory userData = userConfig[msg.sender];
+    require(
+      userData.withdrawnCount != userData.vestedNFTs.length,
+      "No NFTs left to claim!"
+    );
+    uint256 nftsReleased = numNFTsReleased(msg.sender);
+    require(
+      nftsReleased > userData.withdrawnCount,
+      "Wait for remaining NFTs to release!"
+    );
+    address vestingContract = address(this);
+    for (uint256 i = userData.withdrawnCount; i < nftsReleased; i++) {
+      vestingNFT.transferFrom(
+        vestingContract,
+        msg.sender,
+        userData.vestedNFTs[i]
+      );
+    }
+    userConfig[msg.sender].withdrawnCount = nftsReleased;
   }
 
   modifier whenNotPaused() {
@@ -105,12 +118,7 @@ contract Vesting is Ownable {
     _;
   }
 
-  function pauseVesting()
-    external
-    afterVestingStarted
-    inVestingPeriod
-    whenNotPaused
-  {
+  function pauseVesting() external inVestingPeriod whenNotPaused {
     pausedConfig[msg.sender].pausedTime = block.timestamp;
   }
 
@@ -122,12 +130,7 @@ contract Vesting is Ownable {
     _;
   }
 
-  function unpauseVesting()
-    external
-    afterVestingStarted
-    inVestingPeriod
-    whenPaused
-  {
+  function unpauseVesting() external inVestingPeriod whenPaused {
     PausedData storage pausedData = pausedConfig[msg.sender];
     if (block.timestamp > pausedData.pausedTime) {
       pausedData.timeOffset += block.timestamp - pausedData.pausedTime;
@@ -147,5 +150,19 @@ contract Vesting is Ownable {
         vestingNFT.transferFrom(vestingContract, reciever, i);
       }
     }
+  }
+
+  function numNFTsReleased(address user)
+    public
+    view
+    inVestingPeriod
+    returns (uint256)
+  {
+    uint256 vestingStart = vestingStartTime + pausedConfig[user].timeOffset;
+    require(
+      vestingStart + cliffPeriod < block.timestamp,
+      "Not after cliff period!"
+    );
+    return (block.timestamp - vestingStart) / releasePeriod;
   }
 }

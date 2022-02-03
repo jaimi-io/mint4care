@@ -29,6 +29,9 @@ contract Vesting is Ownable {
     uint256 timeOffset; // time offset in seconds due to pausings
   }
 
+  /**
+   * @param nftAddress - address of an ERC721 token used for vesting
+   */
   constructor(address nftAddress) {
     vestingNFT = IERC721(nftAddress);
   }
@@ -38,6 +41,11 @@ contract Vesting is Ownable {
     _;
   }
 
+  /**
+   * @notice Sets the vesting parameters for a user. Can only be set before vesting started.
+   * @param account - address of the user to set the vesting parameters for
+   * @param tokenIds - NFT token IDs to be assigned to the user
+   */
   function setUser(address account, uint8[] memory tokenIds)
     external
     onlyOwner
@@ -50,15 +58,20 @@ contract Vesting is Ownable {
     }
   }
 
-  function setUsers(address[] memory account, uint8[][] memory tokenIds)
+  /**
+   * @notice Sets the vesting parameters for multiple users. Can only be set before vesting started.
+   * @param accounts - addresses of the users to set the vesting parameters for
+   * @param tokenIds - NFT token IDs to be assigned to each user
+   */
+  function setUsers(address[] memory accounts, uint8[][] memory tokenIds)
     external
     onlyOwner
     beforeVestingStarted
   {
-    require(account.length == tokenIds.length, "Invalid array lengths!");
+    require(accounts.length == tokenIds.length, "Invalid array lengths!");
     uint256 maxTokens;
-    for (uint256 i = 0; i < account.length; i++) {
-      userConfig[account[i]] = UserData(tokenIds[i], 0);
+    for (uint256 i = 0; i < accounts.length; i++) {
+      userConfig[accounts[i]] = UserData(tokenIds[i], 0);
       if (tokenIds[i].length > maxTokens) {
         maxTokens = tokenIds[i].length;
       }
@@ -68,6 +81,13 @@ contract Vesting is Ownable {
     }
   }
 
+  /**
+   * @notice Starts the vesting procedure.
+   * @param timestamp - vesting start time, if 0 start this block
+   * @param cliffPeriod_ - cliff period in seconds
+   * @param releasePeriod_ - time in seconds for one NFT to be released
+   * @param securityPeriod - time in seconds for claims to be valid before vesting closes
+   */
   function startVesting(
     uint256 timestamp,
     uint256 cliffPeriod_,
@@ -100,8 +120,13 @@ contract Vesting is Ownable {
     _;
   }
 
+  /**
+   * @notice Claims released NFTs from the vesting contract for a given user.
+   * Reverts if not in vestingPeriod, user has not vested NFTs or if all available NFTs
+   * have already been claimed by the user.
+   */
   function claim() external inVestingPeriod {
-    UserData memory userData = userConfig[msg.sender];
+    UserData memory userData = getUserData(msg.sender);
     require(userData.vestedNFTs.length > 0, "No NFTs to claim!");
     require(
       userData.withdrawnCount != userData.vestedNFTs.length,
@@ -131,6 +156,12 @@ contract Vesting is Ownable {
     _;
   }
 
+  /**
+   * @notice Pauses the vesting procedure for a user.
+   * User is able to claim NFTs released before pause time. To claim remaining NFTs,
+   * user must unpause the vesting procedure. Only callable if currently unpaused and in
+   * vesting period.
+   */
   function pauseVesting() external inVestingPeriod whenNotPaused {
     pausedConfig[msg.sender].pausedTime = block.timestamp;
   }
@@ -143,6 +174,10 @@ contract Vesting is Ownable {
     _;
   }
 
+  /**
+   * @notice Resumes the vesting procedure for a user.
+   * Only callable if user vesting currently paused and in vesting period.
+   */
   function unpauseVesting() external inVestingPeriod whenPaused {
     PausedData storage pausedData = pausedConfig[msg.sender];
     if (block.timestamp > pausedData.pausedTime) {
@@ -156,6 +191,11 @@ contract Vesting is Ownable {
     _;
   }
 
+  /**
+   * @notice Ends vesting by returning remaining NFTs to reciever.
+   * Only callable by owner and if vesting has ended.
+   * @param reciever - address to return NFTs to
+   */
   function endVesting(address reciever) external onlyOwner afterVestingEnded {
     address vestingContract = address(this);
     for (uint256 i = 1; i <= 100; i++) {
@@ -165,6 +205,12 @@ contract Vesting is Ownable {
     }
   }
 
+  /**
+   * @notice Returns the number of NFTs released to a user at current time.
+   * If paused at current time, returns number of NFTs released to user at time of pause.
+   * @param user - address of the user
+   * @return uint256 - number of NFTs available to the user (includes previous withdrawls)
+   */
   function numNFTsReleased(address user)
     public
     view
@@ -189,6 +235,11 @@ contract Vesting is Ownable {
     return numReleased;
   }
 
+  /**
+   * @notice Returns the vesting data for a user.
+   * @param user - address of the user
+   * @return UserData memory - user vesting data
+   */
   function getUserData(address user) public view returns (UserData memory) {
     return userConfig[user];
   }

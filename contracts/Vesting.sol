@@ -10,7 +10,7 @@ contract Vesting is Ownable {
   uint256 public cliffPeriod; // cliff period in seconds
   uint256 public releasePeriod; // time in seconds for one NFT to be released
   uint256 public vestingEndTime; // timestamp when the vesting procedure ends
-  IERC721 public vestingNFT; // the address of an ERC721 token used for vesting
+  IERC721 public immutable vestingNFT; // the address of an ERC721 token used for vesting
 
   uint256 private maxOwned; // maximum number of NFTs that is owned by a single address
 
@@ -31,7 +31,6 @@ contract Vesting is Ownable {
 
   constructor(address nftAddress) {
     vestingNFT = IERC721(nftAddress);
-    vestingStarted = false;
   }
 
   modifier beforeVestingStarted() {
@@ -57,7 +56,7 @@ contract Vesting is Ownable {
     beforeVestingStarted
   {
     require(account.length == tokenIds.length, "Invalid array lengths!");
-    uint256 maxTokens = 0;
+    uint256 maxTokens;
     for (uint256 i = 0; i < account.length; i++) {
       userConfig[account[i]] = UserData(tokenIds[i], 0);
       if (tokenIds[i].length > maxTokens) {
@@ -88,7 +87,7 @@ contract Vesting is Ownable {
     releasePeriod = releasePeriod_;
     vestingStartTime = timestamp == 0 ? block.timestamp : timestamp;
 
-    uint256 minVestingTime = releasePeriod * maxOwned;
+    uint256 minVestingTime = releasePeriod_ * maxOwned;
     vestingEndTime = vestingStartTime + minVestingTime + securityPeriod;
     vestingStarted = true;
   }
@@ -172,12 +171,22 @@ contract Vesting is Ownable {
     inVestingPeriod
     returns (uint256)
   {
-    uint256 vestingStart = vestingStartTime + pausedConfig[user].timeOffset;
+    PausedData memory pausedData = pausedConfig[user];
+    uint256 vestingStart = vestingStartTime + pausedData.timeOffset;
+    uint256 currentTime = pausedData.pausedTime != 0
+      ? pausedData.pausedTime
+      : block.timestamp;
+
     require(
-      vestingStart + cliffPeriod < block.timestamp,
+      vestingStart + cliffPeriod < currentTime,
       "Not after cliff period!"
     );
-    return (block.timestamp - vestingStart) / releasePeriod;
+    uint256 maxNFTs = userConfig[user].vestedNFTs.length;
+    uint256 numReleased = (currentTime - vestingStart) / releasePeriod;
+    if (maxNFTs < numReleased) {
+      return maxNFTs;
+    }
+    return numReleased;
   }
 
   function getUserData(address user) public view returns (UserData memory) {

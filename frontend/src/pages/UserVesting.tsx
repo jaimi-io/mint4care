@@ -8,6 +8,7 @@ import {
   claimNFT,
   fetchVestingData,
   pauseVesting,
+  vestingAddress,
 } from "../utils/vestingContractUtils";
 
 const DEFAULT_GRID_PROPS: GridPropsI = {
@@ -43,6 +44,9 @@ const UserVesting = (): JSX.Element => {
       <Stack justifyContent="space-between">
         <Typography textAlign="center" variant="h3" p={2}>
           User Vesting
+        </Typography>
+        <Typography textAlign="center" variant="h6">
+          {`(${vestingAddress})`}
         </Typography>
         <Grid container justifyContent="center" p={2}>
           <Wallet />

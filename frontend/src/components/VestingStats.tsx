@@ -24,11 +24,27 @@ const Stat = ({ title, children, attribute }: StatPropsI) => {
   );
 };
 
-const countdownRender = ({ hours, minutes, seconds }: CountdownRenderProps) => (
-  <Typography>
-    {hours}h {minutes}m {seconds}s
-  </Typography>
-);
+const countdownRender = ({
+  days,
+  hours,
+  minutes,
+  seconds,
+}: CountdownRenderProps) => {
+  let text = "";
+  if (days > 0) {
+    text += `${days}d `;
+  }
+  if (hours > 0) {
+    text += `${hours}h `;
+  }
+  if (minutes > 0) {
+    text += `${minutes}m `;
+  }
+  if (seconds > 0) {
+    text += `${seconds}s`;
+  }
+  return <Typography>{text}</Typography>;
+};
 
 export interface StatsPropsI {
   paused?: boolean;

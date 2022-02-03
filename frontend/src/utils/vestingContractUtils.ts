@@ -5,7 +5,7 @@ import { GridPropsI } from "../components/NFTGrid";
 import { StatsPropsI } from "../components/VestingStats";
 import { Vesting__factory as VestingFactory } from "../typechain";
 
-const vestingAddress = "0x0716985f5DB8fB55715CDccAA63E7719A4CC636C";
+export const vestingAddress = "0x0716985f5DB8fB55715CDccAA63E7719A4CC636C";
 const toMilliseconds = 1000;
 
 const calculateNextRelease = (
@@ -39,9 +39,9 @@ export const fetchVestingData = async (
   setStatsProps: React.Dispatch<React.SetStateAction<StatsPropsI>>,
   setRefresh: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
-  // Wait 5s to ensure contract is up to date before querying it
-  const TIMEOUT = 5 * toMilliseconds;
-  await setTimeout(() => void 0, TIMEOUT);
+  // Wait 1s to ensure contract is up to date before querying it
+  const TIMEOUT = 1 * toMilliseconds;
+  await new Promise((resolve) => setTimeout(resolve, TIMEOUT));
   const vestingContract = VestingFactory.connect(
     vestingAddress,
     library.getSigner()

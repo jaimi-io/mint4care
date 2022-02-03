@@ -1,9 +1,11 @@
 import { Web3Provider } from "@ethersproject/providers";
+import { ContractTransaction } from "ethers";
+import React from "react";
 import { GridPropsI } from "../components/NFTGrid";
 import { StatsPropsI } from "../components/VestingStats";
 import { Vesting__factory as VestingFactory } from "../typechain";
 
-const vestingAddress = "0x9e4097611639016d39E140EB99fF9D620f486E04";
+const vestingAddress = "0x6f5aFe8BCd4dD3e2E634a00c0850f077Ac8BbC83";
 
 export const fetchVestingData = async (
   library: Web3Provider,
@@ -32,4 +34,44 @@ export const fetchVestingData = async (
     nextRelease: nextRelease.toNumber() * 1000,
     vestingEnd: vestingEnd.toNumber() * 1000,
   });
+};
+
+export const claimNFT = async (
+  library: Web3Provider,
+  setRefresh: React.Dispatch<React.SetStateAction<boolean>>
+) => {
+  const vestingContract = VestingFactory.connect(
+    vestingAddress,
+    library.getSigner()
+  );
+  try {
+    const tx = await vestingContract.claim();
+    await tx.wait();
+    setRefresh((prev) => !prev);
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+export const pauseVesting = async (
+  library: Web3Provider,
+  isPaused: boolean,
+  setRefresh: React.Dispatch<React.SetStateAction<boolean>>
+) => {
+  const vestingContract = VestingFactory.connect(
+    vestingAddress,
+    library.getSigner()
+  );
+  let tx: ContractTransaction;
+  try {
+    if (isPaused) {
+      tx = await vestingContract.unpauseVesting();
+    } else {
+      tx = await vestingContract.pauseVesting();
+    }
+    await tx.wait();
+    setRefresh((prev) => !prev);
+  } catch (error) {
+    console.error(error);
+  }
 };

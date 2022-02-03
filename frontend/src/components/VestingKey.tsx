@@ -32,7 +32,7 @@ const VestingKey = ({ colorKeys }: VestingKeyPropsI): JSX.Element => {
   return (
     <Stack justifyContent="space-around" p={4}>
       {colorKeys.map(({ color, title }) => (
-        <ColorKey color={color} title={title} />
+        <ColorKey color={color} title={title} key={color} />
       ))}
     </Stack>
   );

@@ -227,16 +227,22 @@ contract Vesting is Ownable {
     if (isPaused) {
       return (isPaused, 0, vestingEndTime);
     }
-    uint256 currentTime = block.timestamp + pausedConfig[user].timeOffset;
-    uint256 vestingStartTime_ = vestingStartTime;
+    uint256 vestingStartTime_ = vestingStartTime +
+      pausedConfig[user].timeOffset;
     uint256 releasePeriod_ = releasePeriod;
     uint256 cliffTime = vestingStartTime_ + cliffPeriod;
-    if (currentTime < cliffTime) {
-      return (isPaused, cliffTime + releasePeriod_, vestingEndTime);
+    if (block.timestamp < cliffTime) {
+      if (releasePeriod_ > cliffPeriod) {
+        uint256 releaseTime = vestingStartTime_ + releasePeriod_;
+        return (isPaused, releaseTime, vestingEndTime);
+      } else {
+        return (isPaused, cliffTime, vestingEndTime);
+      }
     }
-    uint256 nextRelease = currentTime +
-      ((currentTime - vestingStartTime_) % releasePeriod_);
-    return (isPaused, nextRelease, vestingEndTime);
+    uint256 nextReleaseTime = block.timestamp +
+      releasePeriod_ -
+      ((block.timestamp - vestingStartTime_) % releasePeriod_);
+    return (isPaused, nextReleaseTime, vestingEndTime);
   }
 
   /**

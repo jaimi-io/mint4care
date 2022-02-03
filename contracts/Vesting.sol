@@ -206,6 +206,40 @@ contract Vesting is Ownable {
   }
 
   /**
+   * @notice Returns the vesting time statistics for a user.
+   * @param user - address of the user
+   * @return bool - true if user has paused vesting
+   * @return uint256 - time of next release
+   * @return uint256 - time of vesting end
+   */
+  function getVestingStats(address user)
+    external
+    view
+    inVestingPeriod
+    returns (
+      bool,
+      uint256,
+      uint256
+    )
+  {
+    uint256 pausedTime = pausedConfig[user].pausedTime;
+    bool isPaused = pausedTime != 0;
+    if (isPaused) {
+      return (isPaused, 0, vestingEndTime);
+    }
+    uint256 currentTime = block.timestamp + pausedConfig[user].timeOffset;
+    uint256 vestingStartTime_ = vestingStartTime;
+    uint256 releasePeriod_ = releasePeriod;
+    uint256 cliffTime = vestingStartTime_ + cliffPeriod;
+    if (currentTime < cliffTime) {
+      return (isPaused, cliffTime + releasePeriod_, vestingEndTime);
+    }
+    uint256 nextRelease = currentTime +
+      ((currentTime - vestingStartTime_) % releasePeriod_);
+    return (isPaused, nextRelease, vestingEndTime);
+  }
+
+  /**
    * @notice Returns the number of NFTs released to a user at current time.
    * If paused at current time, returns number of NFTs released to user at time of pause.
    * @param user - address of the user

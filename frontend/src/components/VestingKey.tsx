@@ -7,8 +7,8 @@ interface ColorKeyPropsI {
 
 const ColorKey = ({ color, title }: ColorKeyPropsI): JSX.Element => {
   return (
-    <Grid container spacing={2} alignItems="center">
-      <Grid item lg={1} md={2}>
+    <Grid container item spacing={2} alignItems="center">
+      <Grid item lg={2} md={4}>
         <Box
           sx={{
             backgroundColor: color,
@@ -17,7 +17,7 @@ const ColorKey = ({ color, title }: ColorKeyPropsI): JSX.Element => {
           a
         </Box>
       </Grid>
-      <Grid item xs={10}>
+      <Grid item xs={4}>
         <Typography>{title}</Typography>
       </Grid>
     </Grid>
@@ -30,10 +30,7 @@ interface VestingKeyPropsI {
 
 const VestingKey = ({ colorKeys }: VestingKeyPropsI): JSX.Element => {
   return (
-    <Stack>
-      <Typography sx={{ textDecoration: "underline" }} variant="h6">
-        Key
-      </Typography>
+    <Stack justifyContent="space-around" p={4}>
       {colorKeys.map(({ color, title }) => (
         <ColorKey color={color} title={title} />
       ))}

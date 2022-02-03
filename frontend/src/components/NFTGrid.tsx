@@ -1,5 +1,6 @@
-import { Box, Paper, Grid, Skeleton } from "@mui/material";
+import { Box, Grid, Skeleton } from "@mui/material";
 import { useEffect, useState } from "react";
+import CustomPaper from "./CustomPaper";
 import NFTItem from "./NFTItem";
 import VestingKey from "./VestingKey";
 
@@ -21,9 +22,7 @@ const colorKeys = [
   { color: "info.main", title: "Claimable" },
 ];
 
-const paperStyle = {
-  borderRadius: "10px",
-  padding: "10px",
+const minHeight = {
   minHeight: "50px",
 };
 
@@ -49,26 +48,24 @@ const NFTGrid = ({ vestedNFTs, claimed, released }: PropsI): JSX.Element => {
   }, [claimed, released, vestedNFTs]);
 
   return (
-    <Grid container spacing={2} p={2}>
-      <Grid item xs={8}>
-        <Paper sx={paperStyle}>
-          {tokens.length === 0 ? (
-            <Skeleton variant="rectangular" height="50px" />
-          ) : (
+    <CustomPaper sx={minHeight}>
+      {tokens.length === 0 ? (
+        <Skeleton variant="rectangular" height="50px" />
+      ) : (
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={2}>
+            <VestingKey colorKeys={colorKeys} />
+          </Grid>
+          <Grid item xs={10}>
             <Box gap={2} display="flex" flexWrap="wrap" justifyContent="center">
               {tokens.map((token, index) => (
                 <NFTItem key={index} token={token} />
               ))}
             </Box>
-          )}
-        </Paper>
-      </Grid>
-      <Grid item xs={4}>
-        <Paper variant="outlined" sx={paperStyle}>
-          <VestingKey colorKeys={colorKeys} />
-        </Paper>
-      </Grid>
-    </Grid>
+          </Grid>
+        </Grid>
+      )}
+    </CustomPaper>
   );
 };
 

@@ -5,8 +5,32 @@ import { GridPropsI } from "../components/NFTGrid";
 import { StatsPropsI } from "../components/VestingStats";
 import { Vesting__factory as VestingFactory } from "../typechain";
 
-const vestingAddress = "0x6f5aFe8BCd4dD3e2E634a00c0850f077Ac8BbC83";
+const vestingAddress = "0x0716985f5DB8fB55715CDccAA63E7719A4CC636C";
 const toMilliseconds = 1000;
+
+const calculateNextRelease = (
+  isFull: boolean,
+  paused: boolean,
+  vestingStart: number,
+  releasePeriod: number,
+  cliffPeriod: number
+) => {
+  if (isFull || paused) {
+    return 0;
+  }
+  const currentTime = Date.now() / toMilliseconds;
+  const cliffEndTime = vestingStart + cliffPeriod;
+  if (currentTime < cliffEndTime) {
+    if (releasePeriod > cliffPeriod) {
+      return vestingStart + releasePeriod;
+    } else {
+      return cliffEndTime;
+    }
+  }
+  return (
+    currentTime + releasePeriod - ((currentTime - vestingStart) % releasePeriod)
+  );
+};
 
 export const fetchVestingData = async (
   library: Web3Provider,
@@ -31,13 +55,28 @@ export const fetchVestingData = async (
     claimed: withdrawnCount.toNumber(),
     released: released.toNumber(),
   });
-  const [paused, nextRelease, vestingEnd] =
-    await vestingContract.getVestingStats(userAddress);
-  console.log(nextRelease, vestingEnd);
+
+  const [pausedTime, timeOffset] = await vestingContract.getPauseData(
+    userAddress
+  );
+  const paused = !pausedTime.eq(0);
+  const vestingEnd = (await vestingContract.vestingEndTime()).toNumber();
+  const vestingStart = (await vestingContract.vestingStartTime())
+    .add(timeOffset)
+    .toNumber();
+  const releasePeriod = (await vestingContract.releasePeriod()).toNumber();
+  const cliffPeriod = (await vestingContract.cliffPeriod()).toNumber();
+  const nextRelease = calculateNextRelease(
+    released.eq(vestedNFTs.length),
+    paused,
+    vestingStart,
+    releasePeriod,
+    cliffPeriod
+  );
   setStatsProps({
     paused,
-    nextRelease: nextRelease.toNumber() * toMilliseconds,
-    vestingEnd: vestingEnd.toNumber() * toMilliseconds,
+    nextRelease: nextRelease * toMilliseconds,
+    vestingEnd: vestingEnd * toMilliseconds,
     setRefresh,
   });
 };

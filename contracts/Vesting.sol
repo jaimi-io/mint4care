@@ -206,43 +206,16 @@ contract Vesting is Ownable {
   }
 
   /**
-   * @notice Returns the vesting time statistics for a user.
+   * @notice Returns the paused data for a user.
    * @param user - address of the user
-   * @return bool - true if user has paused vesting
-   * @return uint256 - time of next release
-   * @return uint256 - time of vesting end
+   * @return PauseData memory - pause vesting data
    */
-  function getVestingStats(address user)
+  function getPauseData(address user)
     external
     view
-    inVestingPeriod
-    returns (
-      bool,
-      uint256,
-      uint256
-    )
+    returns (PausedData memory)
   {
-    uint256 pausedTime = pausedConfig[user].pausedTime;
-    bool isPaused = pausedTime != 0;
-    if (isPaused) {
-      return (isPaused, 0, vestingEndTime);
-    }
-    uint256 vestingStartTime_ = vestingStartTime +
-      pausedConfig[user].timeOffset;
-    uint256 releasePeriod_ = releasePeriod;
-    uint256 cliffTime = vestingStartTime_ + cliffPeriod;
-    if (block.timestamp < cliffTime) {
-      if (releasePeriod_ > cliffPeriod) {
-        uint256 releaseTime = vestingStartTime_ + releasePeriod_;
-        return (isPaused, releaseTime, vestingEndTime);
-      } else {
-        return (isPaused, cliffTime, vestingEndTime);
-      }
-    }
-    uint256 nextReleaseTime = block.timestamp +
-      releasePeriod_ -
-      ((block.timestamp - vestingStartTime_) % releasePeriod_);
-    return (isPaused, nextReleaseTime, vestingEndTime);
+    return pausedConfig[user];
   }
 
   /**

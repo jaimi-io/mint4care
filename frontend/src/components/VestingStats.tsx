@@ -25,37 +25,35 @@ const countdownRender = ({ hours, minutes, seconds }: CountdownRenderProps) => (
   </Typography>
 );
 
-interface PropsI {
+export interface StatsPropsI {
   paused: boolean;
-  nextRelease: number;
-  vestingEnd: number;
+  nextRelease?: number;
+  vestingEnd?: number;
 }
 
 const VestingStats = ({
   paused,
   nextRelease,
   vestingEnd,
-}: PropsI): JSX.Element => {
+}: StatsPropsI): JSX.Element => {
   return (
-    <Stack direction="row" spacing={2} justifyContent="space-around" p={2}>
+    <Stack direction="row" spacing={2} justifyContent="space-between" p={2}>
       <Stat title="Status">
         <Typography>{paused ? "Paused" : "Unpaused"}</Typography>
       </Stat>
       <Stat title="Next Release">
-        <Countdown
-          date={nextRelease}
-          intervalDelay={0}
-          precision={3}
-          renderer={countdownRender}
-        />
+        {nextRelease ? (
+          <Countdown date={nextRelease} renderer={countdownRender} />
+        ) : (
+          ""
+        )}
       </Stat>
       <Stat title="Vesting End">
-        <Countdown
-          date={vestingEnd}
-          intervalDelay={0}
-          precision={3}
-          renderer={countdownRender}
-        />
+        {vestingEnd ? (
+          <Countdown date={vestingEnd} renderer={countdownRender} />
+        ) : (
+          ""
+        )}
       </Stat>
     </Stack>
   );

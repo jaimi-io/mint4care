@@ -8,7 +8,7 @@ interface ColorKeyPropsI {
 const ColorKey = ({ color, title }: ColorKeyPropsI): JSX.Element => {
   return (
     <Grid container item spacing={2} alignItems="center">
-      <Grid item lg={2} md={4}>
+      <Grid item lg={3} md={4}>
         <Box
           sx={{
             backgroundColor: color,

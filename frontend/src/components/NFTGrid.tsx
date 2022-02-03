@@ -4,7 +4,7 @@ import CustomPaper from "./CustomPaper";
 import NFTItem from "./NFTItem";
 import VestingKey from "./VestingKey";
 
-interface PropsI {
+export interface GridPropsI {
   vestedNFTs: number[];
   claimed: number;
   released: number;
@@ -31,7 +31,11 @@ export interface TokenI {
   status: TokenStatus;
 }
 
-const NFTGrid = ({ vestedNFTs, claimed, released }: PropsI): JSX.Element => {
+const NFTGrid = ({
+  vestedNFTs,
+  claimed,
+  released,
+}: GridPropsI): JSX.Element => {
   const [tokens, setTokens] = useState<TokenI[]>([]);
 
   useEffect(() => {

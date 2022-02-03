@@ -1,11 +1,15 @@
 import React from "react";
 import ReactDOM from "react-dom";
+import { Web3ReactProvider } from "@web3-react/core";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
+import { getLibrary } from "./utils/walletUtils";
 
 ReactDOM.render(
   <React.StrictMode>
-    <App />
+    <Web3ReactProvider getLibrary={getLibrary}>
+      <App />
+    </Web3ReactProvider>
   </React.StrictMode>,
   document.getElementById("root")
 );

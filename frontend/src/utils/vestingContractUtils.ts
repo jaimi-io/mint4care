@@ -6,13 +6,18 @@ import { StatsPropsI } from "../components/VestingStats";
 import { Vesting__factory as VestingFactory } from "../typechain";
 
 const vestingAddress = "0x6f5aFe8BCd4dD3e2E634a00c0850f077Ac8BbC83";
+const toMilliseconds = 1000;
 
 export const fetchVestingData = async (
   library: Web3Provider,
   userAddress: string,
   setGridProps: React.Dispatch<React.SetStateAction<GridPropsI>>,
-  setStatsProps: React.Dispatch<React.SetStateAction<StatsPropsI>>
+  setStatsProps: React.Dispatch<React.SetStateAction<StatsPropsI>>,
+  setRefresh: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
+  // Wait 5s to ensure contract is up to date before querying it
+  const TIMEOUT = 5 * toMilliseconds;
+  await setTimeout(() => void 0, TIMEOUT);
   const vestingContract = VestingFactory.connect(
     vestingAddress,
     library.getSigner()
@@ -31,8 +36,9 @@ export const fetchVestingData = async (
   console.log(nextRelease, vestingEnd);
   setStatsProps({
     paused,
-    nextRelease: nextRelease.toNumber() * 1000,
-    vestingEnd: vestingEnd.toNumber() * 1000,
+    nextRelease: nextRelease.toNumber() * toMilliseconds,
+    vestingEnd: vestingEnd.toNumber() * toMilliseconds,
+    setRefresh,
   });
 };
 

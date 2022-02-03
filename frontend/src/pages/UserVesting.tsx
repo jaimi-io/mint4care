@@ -10,10 +10,6 @@ import {
   pauseVesting,
 } from "../utils/vestingContractUtils";
 
-const DEFAULT_STATS_PROPS: StatsPropsI = {
-  paused: false,
-};
-
 const DEFAULT_GRID_PROPS: GridPropsI = {
   vestedNFTs: [],
   claimed: 0,
@@ -22,13 +18,23 @@ const DEFAULT_GRID_PROPS: GridPropsI = {
 
 const UserVesting = (): JSX.Element => {
   const { active, account, library } = useWeb3React();
-  const [statsProps, setStatsProps] = useState(DEFAULT_STATS_PROPS);
   const [gridProps, setGridProps] = useState(DEFAULT_GRID_PROPS);
   const [refreshData, setRefreshData] = useState(false);
+  const DEFAULT_STATS_PROPS: StatsPropsI = {
+    setRefresh: setRefreshData,
+  };
+
+  const [statsProps, setStatsProps] = useState(DEFAULT_STATS_PROPS);
 
   useEffect(() => {
     if (active && account) {
-      fetchVestingData(library, account, setGridProps, setStatsProps);
+      fetchVestingData(
+        library,
+        account,
+        setGridProps,
+        setStatsProps,
+        setRefreshData
+      );
     }
   }, [active, account, library, refreshData]);
 
@@ -46,6 +52,7 @@ const UserVesting = (): JSX.Element => {
           paused={statsProps.paused}
           nextRelease={statsProps.nextRelease}
           vestingEnd={statsProps.vestingEnd}
+          setRefresh={setRefreshData}
         />
         <NFTGrid
           vestedNFTs={gridProps.vestedNFTs}
@@ -64,7 +71,7 @@ const UserVesting = (): JSX.Element => {
             variant="contained"
             disabled={!active}
             onClick={() =>
-              pauseVesting(library, statsProps.paused, setRefreshData)
+              pauseVesting(library, statsProps.paused ?? false, setRefreshData)
             }>
             {statsProps.paused ? "Unpause" : "Pause"} Vesting
           </Button>

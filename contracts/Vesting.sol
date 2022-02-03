@@ -29,12 +29,21 @@ contract Vesting is Ownable {
     uint256 timeOffset; // time offset in seconds due to pausings
   }
 
+  event UserDataSet(address user, uint8[] tokenIds);
+  event VestingStarted();
+  event NFTsClaimed(address user, uint8[] tokenIds);
+  event NFTsReclaimed(address admin, address receiver, uint8[] tokenIds);
+
   /**
    * @param nftAddress - address of an ERC721 token used for vesting
    */
   constructor(address nftAddress) {
     vestingNFT = IERC721(nftAddress);
   }
+
+  /******************************
+   *        PRE-VESTING         *
+   ******************************/
 
   modifier beforeVestingStarted() {
     require(!vestingStarted, "Vesting has already started!");
@@ -56,6 +65,7 @@ contract Vesting is Ownable {
     if (maxTokens > maxOwned) {
       maxOwned = maxTokens;
     }
+    emit UserDataSet(account, tokenIds);
   }
 
   /**
@@ -75,6 +85,7 @@ contract Vesting is Ownable {
       if (tokenIds[i].length > maxTokens) {
         maxTokens = tokenIds[i].length;
       }
+      emit UserDataSet(accounts[i], tokenIds[i]);
     }
     if (maxTokens > maxOwned) {
       maxOwned = maxTokens;
@@ -110,7 +121,12 @@ contract Vesting is Ownable {
     uint256 minVestingTime = releasePeriod_ * maxOwned;
     vestingEndTime = vestingStartTime + minVestingTime + securityPeriod;
     vestingStarted = true;
+    emit VestingStarted();
   }
+
+  /******************************
+   *       DURING-VESTING       *
+   ******************************/
 
   modifier inVestingPeriod() {
     require(
@@ -138,14 +154,19 @@ contract Vesting is Ownable {
       "Wait for remaining NFTs to release!"
     );
     address vestingContract = address(this);
+    uint8[] memory claimedNFTs = new uint8[](
+      nftsReleased - userData.withdrawnCount
+    );
     for (uint256 i = userData.withdrawnCount; i < nftsReleased; i++) {
       vestingNFT.transferFrom(
         vestingContract,
         msg.sender,
         userData.vestedNFTs[i]
       );
+      claimedNFTs[i - userData.withdrawnCount] = userData.vestedNFTs[i];
     }
     userConfig[msg.sender].withdrawnCount = nftsReleased;
+    emit NFTsClaimed(msg.sender, claimedNFTs);
   }
 
   modifier whenNotPaused() {
@@ -186,6 +207,10 @@ contract Vesting is Ownable {
     pausedData.pausedTime = 0;
   }
 
+  /******************************
+   *        POST-VESTING        *
+   ******************************/
+
   modifier afterVestingEnded() {
     require(block.timestamp >= vestingEndTime, "Vesting has not ended!");
     _;
@@ -194,16 +219,25 @@ contract Vesting is Ownable {
   /**
    * @notice Ends vesting by returning remaining NFTs to reciever.
    * Only callable by owner and if vesting has ended.
-   * @param reciever - address to return NFTs to
+   * @param receiver - address to return NFTs to
    */
-  function endVesting(address reciever) external onlyOwner afterVestingEnded {
+  function endVesting(address receiver) external onlyOwner afterVestingEnded {
     address vestingContract = address(this);
-    for (uint256 i = 1; i <= 100; i++) {
+    uint8[] memory reclaimed = new uint8[](vestingNFT.balanceOf(msg.sender));
+    uint256 j;
+    for (uint8 i = 1; i <= 100; i++) {
       if (vestingNFT.ownerOf(i) == vestingContract) {
-        vestingNFT.transferFrom(vestingContract, reciever, i);
+        vestingNFT.transferFrom(vestingContract, receiver, i);
+        reclaimed[j] = i;
+        j += 1;
       }
     }
+    emit NFTsReclaimed(msg.sender, receiver, reclaimed);
   }
+
+  /******************************
+   *          HELPERS           *
+   ******************************/
 
   /**
    * @notice Returns the paused data for a user.
@@ -216,6 +250,21 @@ contract Vesting is Ownable {
     returns (PausedData memory)
   {
     return pausedConfig[user];
+  }
+
+  /**
+   * @notice Returns the time for 1 NFT to be released in seconds
+   * @param numNFTs - number of NFTs to release
+   * @param numDays - number of days for release
+   * @return uint256 - release period in seconds
+   */
+  function calculateReleasePeriod(uint256 numNFTs, uint256 numDays)
+    external
+    pure
+    returns (uint256)
+  {
+    require(numNFTs > 0 && numDays > 0, "Release params must be 1 or more!");
+    return (numDays * 86400) / numNFTs;
   }
 
   /**

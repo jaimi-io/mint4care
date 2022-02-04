@@ -53,7 +53,7 @@ const UserVesting = (): JSX.Element => {
           <Grid item xs={3}></Grid>
           <Grid item xs={6}>
             <Typography textAlign="center" variant="h3" p={2}>
-              Vesting Dashboard
+              User Vesting Dashboard
             </Typography>
           </Grid>
           <Grid container item xs={3} justifyContent="flex-end">

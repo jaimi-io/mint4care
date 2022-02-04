@@ -51,7 +51,7 @@ export enum VestingStatus {
   InCliffPeriod = "In Cliff Period",
   InProgress = "In Progress",
   Paused = "Paused",
-  Complete = "Complete",
+  Ended = "Ended",
 }
 
 const getVestingStatusColor = (vestingStatus: VestingStatus) => {

@@ -56,8 +56,18 @@ export const fetchVestingData = async (
   let vestingStatus = VestingStatus.NotStarted;
   try {
     released = await vestingContract.numNFTsReleased(userAddress);
-  } catch (err) {
-    vestingStatus = VestingStatus.InCliffPeriod;
+  } catch (err: any) {
+    if (err.data.message.includes("Not after cliff period!")) {
+      vestingStatus = VestingStatus.InCliffPeriod;
+    }
+    if (
+      err.data.message.includes("Not in vesting period!") &&
+      (await vestingContract.vestingEndTime())
+        .mul(toMilliseconds)
+        .lt(Date.now())
+    ) {
+      vestingStatus = VestingStatus.Ended;
+    }
   }
   setGridProps({
     vestedNFTs,
@@ -87,7 +97,8 @@ export const fetchVestingData = async (
   setStatsProps({
     paused,
     vestingStatus,
-    nextRelease: nextRelease * toMilliseconds,
+    nextRelease:
+      vestingStatus === VestingStatus.Ended ? 0 : nextRelease * toMilliseconds,
     vestingEnd: vestingEnd * toMilliseconds,
     setRefresh,
   });

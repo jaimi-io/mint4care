@@ -64,6 +64,7 @@ const UserVesting = (): JSX.Element => {
         <EditableAddress
           vestingAddress={vestingAddress}
           setVestingAddress={setVestingAddress}
+          setRefreshData={setRefreshData}
         />
 
         <VestingStats

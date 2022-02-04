@@ -11,6 +11,7 @@ contract Vesting is Ownable {
   uint256 public releasePeriod; // time in seconds for one NFT to be released
   uint256 public vestingEndTime; // timestamp when the vesting procedure ends
   IERC721 public immutable vestingNFT; // the address of an ERC721 token used for vesting
+  uint256 public boughtNFTs;
 
   uint256 private maxOwned; // maximum number of NFTs that is owned by a single address
 
@@ -20,8 +21,10 @@ contract Vesting is Ownable {
   mapping(address => PausedData) private pausedConfig;
 
   struct UserData {
-    uint8[] vestedNFTs; // token IDs assigned to user
-    uint256 withdrawnCount; // number of tokens withdrawn from vesting
+    uint8 size; // total number of NFTs vested
+    uint8 bitShift;
+    uint8 withdrawnCount; // number of tokens withdrawn from vesting
+    uint128 vestedNFTs; // bitmap of token IDs assigned to user
   }
 
   struct PausedData {
@@ -29,7 +32,7 @@ contract Vesting is Ownable {
     uint256 timeOffset; // time offset in seconds due to pausings
   }
 
-  event UserDataSet(address user, uint8[] tokenIds);
+  event UserDataSet(address user, uint256 vestedNFTs);
   event VestingStarted();
   event NFTsClaimed(address user, uint8[] tokenIds);
   event NFTsReclaimed(address admin, address receiver, uint8[] tokenIds);
@@ -53,39 +56,36 @@ contract Vesting is Ownable {
   /**
    * @notice Sets the vesting parameters for a user. Can only be set before vesting started.
    * @param account - address of the user to set the vesting parameters for
-   * @param tokenIds - NFT token IDs to be assigned to the user
+   * @param vestedNFTs - bitmap of NFT token IDs to be assigned to the user
    */
-  function setUser(address account, uint8[] memory tokenIds)
+  function setUser(address account, uint128 vestedNFTs)
     external
     onlyOwner
     beforeVestingStarted
   {
-    userConfig[account] = UserData(tokenIds, 0);
-    uint256 maxTokens = tokenIds.length;
-    if (maxTokens > maxOwned) {
-      maxOwned = maxTokens;
+    uint256 size = _setUser(account, vestedNFTs);
+    if (size > maxOwned) {
+      maxOwned = size;
     }
-    emit UserDataSet(account, tokenIds);
   }
 
   /**
    * @notice Sets the vesting parameters for multiple users. Can only be set before vesting started.
    * @param accounts - addresses of the users to set the vesting parameters for
-   * @param tokenIds - NFT token IDs to be assigned to each user
+   * @param vestedNFTs - array of bitmaps of NFT token IDs to be assigned to each user
    */
-  function setUsers(address[] memory accounts, uint8[][] memory tokenIds)
+  function setUsers(address[] memory accounts, uint128[] memory vestedNFTs)
     external
     onlyOwner
     beforeVestingStarted
   {
-    require(accounts.length == tokenIds.length, "Invalid array lengths!");
+    require(accounts.length == vestedNFTs.length, "Invalid array lengths!");
     uint256 maxTokens;
     for (uint256 i = 0; i < accounts.length; i++) {
-      userConfig[accounts[i]] = UserData(tokenIds[i], 0);
-      if (tokenIds[i].length > maxTokens) {
-        maxTokens = tokenIds[i].length;
+      uint256 size = _setUser(accounts[i], vestedNFTs[i]);
+      if (size > maxTokens) {
+        maxTokens = size;
       }
-      emit UserDataSet(accounts[i], tokenIds[i]);
     }
     if (maxTokens > maxOwned) {
       maxOwned = maxTokens;
@@ -143,29 +143,31 @@ contract Vesting is Ownable {
    */
   function claim() external inVestingPeriod {
     UserData memory userData = getUserData(msg.sender);
-    require(userData.vestedNFTs.length > 0, "No NFTs to claim!");
-    require(
-      userData.withdrawnCount != userData.vestedNFTs.length,
-      "No NFTs left to claim!"
-    );
+    require(userData.size > 0, "No NFTs to claim!");
+    require(userData.withdrawnCount != userData.size, "No NFTs left to claim!");
     uint256 nftsReleased = numNFTsReleased(msg.sender);
     require(
       nftsReleased > userData.withdrawnCount,
       "Wait for remaining NFTs to release!"
     );
     address vestingContract = address(this);
-    uint8[] memory claimedNFTs = new uint8[](
-      nftsReleased - userData.withdrawnCount
-    );
-    for (uint256 i = userData.withdrawnCount; i < nftsReleased; i++) {
-      vestingNFT.transferFrom(
-        vestingContract,
-        msg.sender,
-        userData.vestedNFTs[i]
-      );
-      claimedNFTs[i - userData.withdrawnCount] = userData.vestedNFTs[i];
+    uint8 bitShift = userData.bitShift;
+    uint8 i = userData.withdrawnCount;
+    uint128 bitMap = userData.vestedNFTs >> bitShift;
+    uint8[] memory claimedNFTs = new uint8[](nftsReleased - i);
+    uint256 j;
+    while (i < nftsReleased) {
+      if ((bitMap & 1) == 1) {
+        vestingNFT.transferFrom(vestingContract, msg.sender, bitShift + 1);
+        claimedNFTs[j] = bitShift + 1;
+        j += 1;
+        i += 1;
+      }
+      bitShift += 1;
+      bitMap >>= 1;
     }
-    userConfig[msg.sender].withdrawnCount = nftsReleased;
+    userConfig[msg.sender].withdrawnCount = i;
+    userConfig[msg.sender].bitShift = bitShift;
     emit NFTsClaimed(msg.sender, claimedNFTs);
   }
 
@@ -289,7 +291,7 @@ contract Vesting is Ownable {
       vestingStart + cliffPeriod < currentTime,
       "Not after cliff period!"
     );
-    uint256 maxNFTs = userConfig[user].vestedNFTs.length;
+    uint256 maxNFTs = userConfig[user].size;
     uint256 numReleased = (currentTime - vestingStart) / releasePeriod;
     if (maxNFTs < numReleased) {
       return maxNFTs;
@@ -304,5 +306,37 @@ contract Vesting is Ownable {
    */
   function getUserData(address user) public view returns (UserData memory) {
     return userConfig[user];
+  }
+
+  /**
+   * @notice Sets the vesting parameters for a user. Can only be set before vesting started.
+   * @param account - address of the user to set the vesting parameters for
+   * @param vestedNFTs - bitmap of NFT token IDs to be assigned to the user
+   */
+  function _setUser(address account, uint128 vestedNFTs)
+    internal
+    returns (uint8)
+  {
+    require(
+      vestedNFTs & boughtNFTs == 0,
+      "No duplicate NFT ownership allowed!"
+    );
+    uint8 size;
+    uint128 bitMap = vestedNFTs;
+    uint8 bitShift;
+    uint8 i;
+    while (bitMap != 0) {
+      if ((bitMap & 1) == 1) {
+        if (bitShift == 0) {
+          bitShift = i;
+        }
+        size += 1;
+      }
+      i += 1;
+      bitMap >>= 1;
+    }
+    userConfig[account] = UserData(size, bitShift, 0, vestedNFTs);
+    boughtNFTs |= vestedNFTs;
+    return size;
   }
 }

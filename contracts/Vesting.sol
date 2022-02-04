@@ -60,12 +60,10 @@ contract Vesting is Ownable {
     onlyOwner
     beforeVestingStarted
   {
-    userConfig[account] = UserData(tokenIds, 0);
-    uint256 maxTokens = tokenIds.length;
+    uint256 maxTokens = _setUser(account, tokenIds);
     if (maxTokens > maxOwned) {
       maxOwned = maxTokens;
     }
-    emit UserDataSet(account, tokenIds);
   }
 
   /**
@@ -81,11 +79,10 @@ contract Vesting is Ownable {
     require(accounts.length == tokenIds.length, "Invalid array lengths!");
     uint256 maxTokens;
     for (uint256 i = 0; i < accounts.length; i++) {
-      userConfig[accounts[i]] = UserData(tokenIds[i], 0);
-      if (tokenIds[i].length > maxTokens) {
-        maxTokens = tokenIds[i].length;
+      uint256 tokenLength = _setUser(accounts[i], tokenIds[i]);
+      if (tokenLength > maxTokens) {
+        maxTokens = tokenLength;
       }
-      emit UserDataSet(accounts[i], tokenIds[i]);
     }
     if (maxTokens > maxOwned) {
       maxOwned = maxTokens;
@@ -304,5 +301,20 @@ contract Vesting is Ownable {
    */
   function getUserData(address user) public view returns (UserData memory) {
     return userConfig[user];
+  }
+
+  /**
+   * @notice Sets the vesting parameters for a user.
+   * @param account - address of the user to set the vesting parameters for
+   * @param tokenIds - NFT token IDs to be assigned to the user
+   * @return uint256 - number of vested tokens
+   */
+  function _setUser(address account, uint8[] memory tokenIds)
+    internal
+    returns (uint256)
+  {
+    userConfig[account] = UserData(tokenIds, 0);
+    emit UserDataSet(account, tokenIds);
+    return tokenIds.length;
   }
 }

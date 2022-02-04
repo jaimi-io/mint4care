@@ -48,9 +48,8 @@ export const fetchVestingData = async (
     vestingAddress,
     library.getSigner()
   );
-  const [size, vestedNFTs, withdrawnCount] = await vestingContract.getUserData(
-    userAddress
-  );
+  const [size, , withdrawnCount, vestedNFTs] =
+    await vestingContract.getUserData(userAddress);
   let released = BigNumber.from(0);
   let vestingStatus = VestingStatus.NotStarted;
   try {
@@ -71,12 +70,12 @@ export const fetchVestingData = async (
   let bitMap = vestedNFTs;
   let i = 0;
   const nftsArray: number[] = [];
-  while (bitMap !== 0) {
-    if ((bitMap & 1) === 1) {
+  while (!vestedNFTs.eq(0)) {
+    if (bitMap.and(1).eq(1)) {
       nftsArray.push(i);
     }
     i += 1;
-    bitMap >>= 1;
+    bitMap = bitMap.shr(1);
   }
 
   setGridProps({

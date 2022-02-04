@@ -46,24 +46,43 @@ const countdownRender = ({
   return <Typography>{text}</Typography>;
 };
 
+export enum VestingStatus {
+  NotStarted = "Not Started",
+  InCliffPeriod = "In Cliff Period",
+  InProgress = "In Progress",
+  Paused = "Paused",
+  Ended = "Ended",
+}
+
+const getVestingStatusColor = (vestingStatus: VestingStatus) => {
+  if (vestingStatus === VestingStatus.InProgress) {
+    return "success.main";
+  }
+  if (vestingStatus === VestingStatus.Paused) {
+    return "error.main";
+  }
+  return "text.main";
+};
+
 export interface StatsPropsI {
   paused?: boolean;
+  vestingStatus: VestingStatus;
   nextRelease?: number;
   vestingEnd?: number;
   setRefresh: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const VestingStats = ({
-  paused,
+  vestingStatus,
   nextRelease,
   vestingEnd,
   setRefresh,
 }: StatsPropsI): JSX.Element => {
   return (
     <Stack direction="row" spacing={2} justifyContent="space-between" p={2}>
-      <Stat title="Vesting Status" attribute={paused}>
-        <Typography color={paused ? "error.main" : "success.main"}>
-          {paused ? "Paused" : "Running"}
+      <Stat title="Vesting Status" attribute={true}>
+        <Typography color={getVestingStatusColor(vestingStatus)}>
+          {vestingStatus}
         </Typography>
       </Stat>
       <Stat title="Next Release" attribute={nextRelease}>

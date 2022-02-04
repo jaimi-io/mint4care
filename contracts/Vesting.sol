@@ -113,6 +113,8 @@ contract Vesting is Ownable {
       timestamp == 0 || timestamp > block.timestamp,
       "Invalid timestamp!"
     );
+    require(releasePeriod_ > 0, "Invalid release period!");
+    require(boughtNFTs != 0, "No user vesting information provided!");
 
     cliffPeriod = cliffPeriod_;
     releasePeriod = releasePeriod_;
@@ -219,13 +221,15 @@ contract Vesting is Ownable {
   }
 
   /**
-   * @notice Ends vesting by returning remaining NFTs to reciever.
+   * @notice Returns remaining NFTs to reciever.
    * Only callable by owner and if vesting has ended.
    * @param receiver - address to return NFTs to
    */
-  function endVesting(address receiver) external onlyOwner afterVestingEnded {
+  function reclaimNFTs(address receiver) external onlyOwner afterVestingEnded {
     address vestingContract = address(this);
-    uint8[] memory reclaimed = new uint8[](vestingNFT.balanceOf(msg.sender));
+    uint8[] memory reclaimed = new uint8[](
+      vestingNFT.balanceOf(vestingContract)
+    );
     uint256 j;
     for (uint8 i = 1; i <= 100; i++) {
       if (vestingNFT.ownerOf(i) == vestingContract) {

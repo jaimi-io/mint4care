@@ -13,7 +13,8 @@ export const getLibrary = (
 };
 
 const AVAX_FUJI = 43113;
-const supportedChains = [AVAX_FUJI];
+const AVAX_LOCAL = 43112;
+const supportedChains = [AVAX_LOCAL, AVAX_FUJI];
 
 export const connector = new InjectedConnector({
   supportedChainIds: supportedChains,

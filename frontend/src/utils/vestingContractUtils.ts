@@ -1,11 +1,12 @@
 import { Web3Provider } from "@ethersproject/providers";
-import { ContractTransaction } from "ethers";
+import { BigNumber, ContractTransaction } from "ethers";
 import React from "react";
 import { GridPropsI } from "../components/NFTGrid";
-import { StatsPropsI } from "../components/VestingStats";
+import { StatsPropsI, VestingStatus } from "../components/VestingStats";
 import { Vesting__factory as VestingFactory } from "../typechain";
 
-export const vestingAddress = "0x0716985f5DB8fB55715CDccAA63E7719A4CC636C";
+export const defaultVestingAddress =
+  "0xF6DDEF30C610d042dc40e37C961593475E188B6E";
 const toMilliseconds = 1000;
 
 const calculateNextRelease = (
@@ -34,6 +35,7 @@ const calculateNextRelease = (
 
 export const fetchVestingData = async (
   library: Web3Provider,
+  vestingAddress: string,
   userAddress: string,
   setGridProps: React.Dispatch<React.SetStateAction<GridPropsI>>,
   setStatsProps: React.Dispatch<React.SetStateAction<StatsPropsI>>,
@@ -46,16 +48,22 @@ export const fetchVestingData = async (
     vestingAddress,
     library.getSigner()
   );
+
   const [vestedNFTs, withdrawnCount] = await vestingContract.getUserData(
     userAddress
   );
-  const released = await vestingContract.numNFTsReleased(userAddress);
+  let released = BigNumber.from(0);
+  let vestingStatus = VestingStatus.NotStarted;
+  try {
+    released = await vestingContract.numNFTsReleased(userAddress);
+  } catch (err) {
+    vestingStatus = VestingStatus.InCliffPeriod;
+  }
   setGridProps({
     vestedNFTs,
     claimed: withdrawnCount.toNumber(),
     released: released.toNumber(),
   });
-
   const [pausedTime, timeOffset] = await vestingContract.getPauseData(
     userAddress
   );
@@ -73,8 +81,12 @@ export const fetchVestingData = async (
     releasePeriod,
     cliffPeriod
   );
+  if (vestingStatus === VestingStatus.NotStarted) {
+    vestingStatus = paused ? VestingStatus.Paused : VestingStatus.InProgress;
+  }
   setStatsProps({
     paused,
+    vestingStatus,
     nextRelease: nextRelease * toMilliseconds,
     vestingEnd: vestingEnd * toMilliseconds,
     setRefresh,
@@ -83,6 +95,7 @@ export const fetchVestingData = async (
 
 export const claimNFT = async (
   library: Web3Provider,
+  vestingAddress: string,
   setRefresh: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
   const vestingContract = VestingFactory.connect(
@@ -100,6 +113,7 @@ export const claimNFT = async (
 
 export const pauseVesting = async (
   library: Web3Provider,
+  vestingAddress: string,
   isPaused: boolean,
   setRefresh: React.Dispatch<React.SetStateAction<boolean>>
 ) => {

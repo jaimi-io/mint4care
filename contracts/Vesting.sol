@@ -309,9 +309,10 @@ contract Vesting is Ownable {
   }
 
   /**
-   * @notice Sets the vesting parameters for a user. Can only be set before vesting started.
+   * @notice Sets the vesting parameters for a user. Ensures no user shares the same tokenId
    * @param account - address of the user to set the vesting parameters for
    * @param vestedNFTs - bitmap of NFT token IDs to be assigned to the user
+   * @return uint8 - number of vested tokens
    */
   function _setUser(address account, uint128 vestedNFTs)
     internal

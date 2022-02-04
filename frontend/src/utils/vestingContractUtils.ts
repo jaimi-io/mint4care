@@ -46,13 +46,23 @@ export const fetchVestingData = async (
     vestingAddress,
     library.getSigner()
   );
-  const [vestedNFTs, withdrawnCount] = await vestingContract.getUserData(
+  const [size, vestedNFTs, withdrawnCount] = await vestingContract.getUserData(
     userAddress
   );
   const released = await vestingContract.numNFTsReleased(userAddress);
+  let bitMap = vestedNFTs;
+  let i = 0;
+  const nftsArray: number[] = [];
+  while (bitMap !== 0) {
+    if ((bitMap & 1) === 1) {
+      nftsArray.push(i);
+    }
+    i += 1;
+    bitMap >>= 1;
+  }
   setGridProps({
-    vestedNFTs,
-    claimed: withdrawnCount.toNumber(),
+    vestedNFTs: nftsArray,
+    claimed: withdrawnCount,
     released: released.toNumber(),
   });
 
@@ -67,7 +77,7 @@ export const fetchVestingData = async (
   const releasePeriod = (await vestingContract.releasePeriod()).toNumber();
   const cliffPeriod = (await vestingContract.cliffPeriod()).toNumber();
   const nextRelease = calculateNextRelease(
-    released.eq(vestedNFTs.length),
+    released.eq(size),
     paused,
     vestingStart,
     releasePeriod,

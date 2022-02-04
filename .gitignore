@@ -1,7 +1,7 @@
 # build files
 artifacts
 cache
-typechain
+/typechain
 
 # test coverage
 coverage.json
